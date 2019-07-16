@@ -1,6 +1,5 @@
 from user_gen import user_gen
 from user_gen import age_calculate
-import sys
 import re
 import pytest
 import datetime
@@ -19,7 +18,7 @@ def test_age_calculate():
 
 def test_user_gen():
     users = user_gen(10)
-    # print(users)
+
     for user in users:
 
         assert "@" and "." in user["email"]
@@ -41,7 +40,7 @@ def test_user_gen():
 )
 def test_validate_input_wrong(test_input):
     p = re.compile("^[0-9]+$")
-    assert p.match(test_input) == None
+    assert p.match(test_input) is None
 
 
 @pytest.mark.parametrize(
@@ -49,4 +48,4 @@ def test_validate_input_wrong(test_input):
 )
 def test_validate_input_right(test_input):
     regex = re.compile("^[0-9]+$")
-    assert regex.match(test_input) != None
+    assert regex.match(test_input) is not None

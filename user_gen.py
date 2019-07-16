@@ -1,6 +1,5 @@
 from faker import Faker
 import datetime
-import random
 import re
 import sys
 
@@ -59,4 +58,3 @@ if __name__ == "__main__":
     quantity = int(input)
     users = user_gen(quantity)
     print(users)
-
