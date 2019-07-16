@@ -23,13 +23,13 @@ def age_calculate(DOB, date):
 def user_gen(no_users):
     users = []
 
-    for v in range(no_users):
+    for user in range(no_users):
 
         DOB = fake.date_of_birth(minimum_age=0, maximum_age=115)
         DOB_str = DOB.strftime("%d-%m-%Y")
         user = {
             "name": fake.name(),
-            "birthday": DOB_str,
+            "dob": DOB_str,
             "age": age_calculate(DOB, date),
             "favourite colour": fake.color_name(),
             "address": fake.street_address(),
