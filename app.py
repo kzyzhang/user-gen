@@ -34,7 +34,7 @@ def estimate_gender(name):
         r = requests.get("https://api.genderize.io/?name=" + first_name)
         name_data = r.json()
         gender = name_data["gender"]
-        print(name, gender)
+        print(r, name, gender)
     return gender
 
 
@@ -83,9 +83,68 @@ def validate_input(input):
         sys.exit(1)
 
 
+def generate_breakdown(users):
+
+    colour_breakdown = {}
+    gender_breakdown = {"male": 0, "female": 0}
+    age_breakdown = {}
+    domain_breakdown = {}
+    breakdown = {
+        "colour breakdown": colour_breakdown,
+        "gender breakdown": gender_breakdown,
+        "age breakdown": age_breakdown,
+        "domain breakdown": domain_breakdown,
+    }
+    for user in users:
+
+        if user["favourite colour"] in colour_breakdown:
+            colour_breakdown[user["favourite colour"]] += 1
+        else:
+            colour_breakdown[user["favourite colour"]] = 1
+
+        if user["gender"] == "female":
+            gender_breakdown["female"] += 1
+        else:
+            gender_breakdown["male"] += 1
+
+        for group in age_ranges:
+            if user["age"] >= group[0] and (
+                len(group) == 1 or user["age"] < group[1]
+            ):
+                age_breakdown[group] = user["age"]
+                break
+        domain = (user["email"].split("@"))[-1]
+        print(user["email"], domain)
+
+        if domain in domain_breakdown:
+            domain_breakdown[domain] += 1
+        else:
+            domain_breakdown[domain] = 1
+
+    return breakdown
+
+
+age_ranges = [
+    (0, 9),
+    (10, 19),
+    (20, 29),
+    (30, 39),
+    (40, 49),
+    (50, 59),
+    (60, 69),
+    (70, 79),
+    (80, 89),
+    (90, 99),
+    (100,),
+]
+
+
 if __name__ == "__main__":
     input = sys.argv[1]
     validate_input(input)
     quantity = int(input)
+
     users = user_gen(quantity)
+    user_gen(quantity)
     print(users)
+    print(generate_breakdown(users))
