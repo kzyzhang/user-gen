@@ -3,6 +3,10 @@ import datetime
 import sys
 import re
 import requests
+import urllib.request
+import cv2
+import numpy as np
+import bs4 as bs
 
 date = datetime.datetime.now()
 fake = Faker("en_GB")
@@ -31,11 +35,31 @@ def estimate_gender(name):
     else:
 
         first_name = gen_first_name(name)
-        r = requests.get("https://api.genderize.io/?name=" + first_name)
-        name_data = r.json()
+        name_request = requests.get(
+            "https://api.genderize.io/?name=" + first_name
+        )
+
+        if name_request.status_code != 200:
+
+            image = cat_http_code(name_request.status_code)
+            cv2.imshow("image", image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            sys.exit(1)
+
+        name_data = name_request.json()
         gender = name_data["gender"]
-        print(r, name, gender)
+        print(name_request, name, gender)
     return gender
+
+
+def cat_http_code(status_code):
+    root_url = "https://http.cat/"
+    url = root_url + str(status_code)
+    resp = urllib.request.urlopen(url)
+    image = np.asarray(bytearray(resp.read()), dtype="uint8")
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    return image
 
 
 def gen_first_name(name):
@@ -114,7 +138,7 @@ def generate_breakdown(users):
                 age_breakdown[group] = user["age"]
                 break
         domain = (user["email"].split("@"))[-1]
-        print(user["email"], domain)
+        # print(user["email"], domain)
 
         if domain in domain_breakdown:
             domain_breakdown[domain] += 1
