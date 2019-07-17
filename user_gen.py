@@ -3,6 +3,8 @@ import datetime
 import re
 import sys
 
+import requests
+
 date = datetime.datetime.now()
 fake = Faker("en_GB")
 
@@ -19,6 +21,34 @@ def age_calculate(DOB, date):
         return date.year - DOB.year - 1
 
 
+def estimate_gender(name):
+
+    if "Mr" in name:
+        gender = "male"
+
+    elif "Miss " in name or "Mrs." in name or "Ms." in name:
+        gender = "female"
+
+    else:
+
+        first_name = gen_first_name(name)
+        r = requests.get("https://api.genderize.io/?name=" + first_name)
+        name_data = r.json()
+        gender = name_data["gender"]
+        print(name, gender)
+    return gender
+
+
+def gen_first_name(name):
+    name_split = name.split(" ")
+
+    if len(name_split) == 2:
+        first_name = name_split[0]
+    else:
+        first_name = name_split[1]
+    return first_name
+
+
 def user_gen(no_users):
     users = []
 
@@ -26,8 +56,10 @@ def user_gen(no_users):
 
         DOB = fake.date_of_birth(minimum_age=0, maximum_age=115)
         DOB_str = DOB.strftime("%d-%m-%Y")
+        name = fake.name()
         user = {
-            "name": fake.name(),
+            "name": name,
+            "gender": estimate_gender(name),
             "dob": DOB_str,
             "age": age_calculate(DOB, date),
             "favourite colour": fake.color_name(),
