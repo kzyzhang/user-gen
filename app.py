@@ -4,7 +4,7 @@ import sys
 import re
 import requests
 import numpy as np
-
+import bs4 as bs
 import urllib.request
 import cv2
 
@@ -26,7 +26,6 @@ def age_calculate(DOB, date):
 
 
 def estimate_gender(name):
-
     if "Mr" in name:
         gender = "male"
 
@@ -36,29 +35,65 @@ def estimate_gender(name):
     else:
 
         first_name = gen_first_name(name)
-        name_request = requests.get(
-            "https://api.genderize.io/?name=" + first_name
-        )
-        name_request.status_code = 444
-        if name_request.status_code != 200:
-            image = cat_http_code(name_request.status_code)
-            cv2.imshow("image", image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-            sys.exit(1)
+        url = "https://api.genderize.io/?name=" + first_name
+        name_request = requests.get(url)
+        # name_request.status_code = 444
+
+        cat_http_code(name_request.status_code, url)
+
         name_data = name_request.json()
         gender = name_data["gender"]
         print(name_request, name, gender)
     return gender
 
 
-def cat_http_code(status_code):
-    root_url = "https://http.cat/"
-    url = root_url + str(status_code)
-    resp = urllib.request.urlopen(url)
-    image = np.asarray(bytearray(resp.read()), dtype="uint8")
-    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-    return image
+def find_county_from_postcode(postcode):
+    postcode_split = postcode.split(" ")
+    url = (
+        "https://www.doogal.co.uk/ShowMap.php?postcode="
+        + postcode_split[0]
+        + "%20"
+        + postcode_split[1]
+    )
+    print(url)
+    # Getting the webpage, creating a Response object.
+    postcode_request = requests.get(url)
+
+    # displaying status code image if not 200
+    cat_http_code(postcode_request.status_code, url)
+    # Extracting the source code of the page.
+    data = postcode_request.text
+
+    # Passing the source code to BeautifulSoup to create a BeautifulSoup object for it.
+    soup = bs.BeautifulSoup(data, "lxml")
+
+    # Extracting all the <a> tags into a list.
+    # tags = soup.find("table.children")
+    table = soup.findAll("table", class_="table")
+    print(table)
+    administrative_areas = table[1]("a")
+    print(administrative_areas)
+    for x in administrative_areas:
+        if "Counties" in x["href"]:
+            return x.contents
+    # print(tags)
+
+
+def cat_http_code(status_code, url):
+    if status_code != 200:
+        print(url)
+        root_url = "https://http.cat/"
+        cat_url = root_url + str(status_code)
+        resp = urllib.request.urlopen(cat_url)
+        image = np.asarray(bytearray(resp.read()), dtype="uint8")
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        cv2.imshow("image", image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+        sys.exit(1)
+    else:
+        pass
 
 
 def gen_first_name(name):
@@ -79,14 +114,18 @@ def user_gen(no_users):
         DOB = fake.date_of_birth(minimum_age=0, maximum_age=115)
         DOB_str = DOB.strftime("%d-%m-%Y")
         name = fake.name()
+        gender = estimate_gender(name)
+        postcode = fake.postcode()
+        # print(user)
         user = {
             "name": name,
-            "gender": estimate_gender(name),
+            "gender": gender,
             "dob": DOB_str,
             "age": age_calculate(DOB, date),
             "favourite colour": fake.color_name(),
             "address": fake.street_address(),
-            "postcode": fake.postcode(),
+            "postcode": postcode,
+            "county": find_county_from_postcode(postcode),
             "email": fake.email(),
             "phone number": fake.phone_number(),
             "username": fake.user_name(),
@@ -134,11 +173,14 @@ def generate_breakdown(users):
             if user["age"] >= group[0] and (
                 len(group) == 1 or user["age"] < group[1]
             ):
-                age_breakdown[group] = user["age"]
-                break
-        domain = (user["email"].split("@"))[-1]
-        print(user["email"], domain)
 
+                if group in age_breakdown.keys():
+                    age_breakdown[group] += 1
+                else:
+                    age_breakdown[group] = 1
+                break
+
+        domain = (user["email"].split("@"))[-1]
         if domain in domain_breakdown:
             domain_breakdown[domain] += 1
         else:
@@ -166,8 +208,6 @@ if __name__ == "__main__":
     input = sys.argv[1]
     validate_input(input)
     quantity = int(input)
-
     users = user_gen(quantity)
-    user_gen(quantity)
     print(users)
     print(generate_breakdown(users))
