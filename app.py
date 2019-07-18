@@ -4,7 +4,6 @@ import sys
 import re
 import requests
 import numpy as np
-import bs4 as bs
 import urllib.request
 import cv2
 
@@ -36,47 +35,38 @@ def estimate_gender(name):
 
         first_name = gen_first_name(name)
         url = "https://api.genderize.io/?name=" + first_name
-        name_request = requests.get(url)
-        # name_request.status_code = 444
+        name_response = requests.get(url)
+        # name_response.status_code = 444
 
-        cat_http_code(name_request.status_code, url)
+        cat_http_code(name_response.status_code, url)
 
-        name_data = name_request.json()
+        name_data = name_response.json()
         gender = name_data["gender"]
-        print(name_request, name, gender)
+        print(name_response, name, gender)
     return gender
+
+
+def random_postcode_generator():
+    url = "https://www.doogal.co.uk/CreateRandomPostcode.ashx"
+    response = requests.post(url)
+    postcode = (response.text).split(",")[0]
+    return postcode
 
 
 def find_county_from_postcode(postcode):
     postcode_split = postcode.split(" ")
     url = (
-        "https://www.doogal.co.uk/ShowMap.php?postcode="
+        "https://www.doogal.co.uk/GetPostcode.ashx?postcode="
         + postcode_split[0]
         + "%20"
         + postcode_split[1]
     )
-    print(url)
-    # Getting the webpage, creating a Response object.
-    postcode_request = requests.get(url)
-
-    # displaying status code image if not 200
-    cat_http_code(postcode_request.status_code, url)
-    # Extracting the source code of the page.
-    data = postcode_request.text
-
-    # Passing the source code to BeautifulSoup to create a BeautifulSoup object for it.
-    soup = bs.BeautifulSoup(data, "lxml")
-
-    # Extracting all the <a> tags into a list.
-    # tags = soup.find("table.children")
-    table = soup.findAll("table", class_="table")
-    print(table)
-    administrative_areas = table[1]("a")
-    print(administrative_areas)
-    for x in administrative_areas:
-        if "Counties" in x["href"]:
-            return x.contents
-    # print(tags)
+    response = requests.post(url)
+    response_text = response.text
+    county = response_text.split("\t")[8]
+    if len(county) == 0:
+        county = "N\\A"
+    return county
 
 
 def cat_http_code(status_code, url):
@@ -115,7 +105,7 @@ def user_gen(no_users):
         DOB_str = DOB.strftime("%d-%m-%Y")
         name = fake.name()
         gender = estimate_gender(name)
-        postcode = fake.postcode()
+        postcode = random_postcode_generator()
         # print(user)
         user = {
             "name": name,
@@ -151,6 +141,7 @@ def generate_breakdown(users):
     gender_breakdown = {"male": 0, "female": 0}
     age_breakdown = {}
     domain_breakdown = {}
+    # county_breakdown = {}
     breakdown = {
         "colour breakdown": colour_breakdown,
         "gender breakdown": gender_breakdown,
