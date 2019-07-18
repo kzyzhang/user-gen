@@ -7,7 +7,6 @@ import numpy as np
 import urllib.request
 import cv2
 
-
 date = datetime.datetime.now()
 fake = Faker("en_GB")
 
@@ -46,9 +45,19 @@ def estimate_gender(name):
     return gender
 
 
+def gen_first_name(name):
+    name_split = name.split(" ")
+
+    if len(name_split) == 2:
+        first_name = name_split[0]
+    else:
+        first_name = name_split[1]
+    return first_name
+
+
 def random_postcode_generator():
     url = "https://www.doogal.co.uk/CreateRandomPostcode.ashx"
-    response = requests.post(url)
+    response = requests.get(url)
     postcode = (response.text).split(",")[0]
     return postcode
 
@@ -61,11 +70,10 @@ def find_county_from_postcode(postcode):
         + "%20"
         + postcode_split[1]
     )
-    response = requests.post(url)
-    response_text = response.text
-    county = response_text.split("\t")[8]
+    response = requests.get(url)
+    county = (response.text).split("\t")[8]
     if len(county) == 0:
-        county = "N\\A"
+        county = "N\A"
     return county
 
 
@@ -80,20 +88,9 @@ def cat_http_code(status_code, url):
         cv2.imshow("image", image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-
         sys.exit(1)
     else:
         pass
-
-
-def gen_first_name(name):
-    name_split = name.split(" ")
-
-    if len(name_split) == 2:
-        first_name = name_split[0]
-    else:
-        first_name = name_split[1]
-    return first_name
 
 
 def user_gen(no_users):
@@ -104,12 +101,11 @@ def user_gen(no_users):
         DOB = fake.date_of_birth(minimum_age=0, maximum_age=115)
         DOB_str = DOB.strftime("%d-%m-%Y")
         name = fake.name()
-        gender = estimate_gender(name)
         postcode = random_postcode_generator()
-        # print(user)
+
         user = {
             "name": name,
-            "gender": gender,
+            "gender": estimate_gender(name),
             "dob": DOB_str,
             "age": age_calculate(DOB, date),
             "favourite colour": fake.color_name(),
@@ -139,14 +135,27 @@ def generate_breakdown(users):
 
     colour_breakdown = {}
     gender_breakdown = {"male": 0, "female": 0}
-    age_breakdown = {}
+    age_breakdown = {
+        (0, 9): 0,
+        (10, 19): 0,
+        (20, 29): 0,
+        (30, 39): 0,
+        (40, 49): 0,
+        (50, 59): 0,
+        (60, 69): 0,
+        (70, 79): 0,
+        (80, 89): 0,
+        (90, 99): 0,
+        (100,): 0,
+    }
     domain_breakdown = {}
-    # county_breakdown = {}
+    county_breakdown = {}
     breakdown = {
         "colour breakdown": colour_breakdown,
         "gender breakdown": gender_breakdown,
         "age breakdown": age_breakdown,
         "domain breakdown": domain_breakdown,
+        "county breakdown": county_breakdown,
     }
     for user in users:
 
@@ -160,39 +169,24 @@ def generate_breakdown(users):
         else:
             gender_breakdown["male"] += 1
 
-        for group in age_ranges:
+        for group in age_breakdown.keys():
             if user["age"] >= group[0] and (
                 len(group) == 1 or user["age"] < group[1]
             ):
-
-                if group in age_breakdown.keys():
-                    age_breakdown[group] += 1
-                else:
-                    age_breakdown[group] = 1
+                age_breakdown[group] += 1
                 break
-
         domain = (user["email"].split("@"))[-1]
         if domain in domain_breakdown:
             domain_breakdown[domain] += 1
         else:
             domain_breakdown[domain] = 1
 
+        if user["county"] in county_breakdown:
+            county_breakdown[user["county"]] += 1
+        else:
+            county_breakdown[user["county"]] = 1
+
     return breakdown
-
-
-age_ranges = [
-    (0, 9),
-    (10, 19),
-    (20, 29),
-    (30, 39),
-    (40, 49),
-    (50, 59),
-    (60, 69),
-    (70, 79),
-    (80, 89),
-    (90, 99),
-    (100,),
-]
 
 
 if __name__ == "__main__":
@@ -201,4 +195,5 @@ if __name__ == "__main__":
     quantity = int(input)
     users = user_gen(quantity)
     print(users)
-    print(generate_breakdown(users))
+    print(generate_breakdown(users)["colour breakdown"])
+
